@@ -30,13 +30,13 @@ sleep 10
 # Check if the node is already running in docker
 if [[ -z $(docker ps --filter name='cassandra1' -q) ]]; then
   # Create node
-  docker run --rm -d --name cassandra1 --hostname cassandra --network cassandra_nw -p 9042:9042 cassandra:4.1.5
+  docker run -d --name cassandra1 --hostname cassandra --network cassandra_nw -p 9042:9042 cassandra:4.1.5
 else
   echo "node cassendra1 is already created"
 fi
 
 
-sleep 10
+sleep 60
 
 docker exec -i $NAME cqlsh -u cqlsh -p $EXPOSEPORT -t < ${SCRIPT_DIR}/create-keyspaces-cassandra-db.cql
 

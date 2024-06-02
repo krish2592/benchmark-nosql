@@ -32,10 +32,9 @@ public class ClientApp {
 
         // Initialize connector
         DBClient client = new DBClient();
-        client.connect("172.20.0.2", "9042", "datacenter1");
+        client.connect("172.21.0.2", "9042", "datacenter1");
         System.out.println("Connected to datacenter1");
 
-        //Create KeySpaces
         
 
     //     // Initialize transaction
