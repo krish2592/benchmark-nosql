@@ -2,7 +2,21 @@ package com.clients;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.IOException;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.util.Properties;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.io.InputStream;
 
 public class ClientApp {
     private boolean useD8 = true;
@@ -19,24 +33,129 @@ public class ClientApp {
             transactionFileNumber = Integer.parseInt(args[1]);
         }
 
+        // Configuration
+        Properties properties = new Properties();
+        InputStream input = null; // Initialize outside try block
+
+        try {
+            input = new FileInputStream("/home/ks/eclipse-workspace/benchmark/benchmark-nosql/src/main/resources/config.properties");
+            properties.load(input);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            if (input != null) {
+                try {
+                    input.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+
+        int corePoolSize = Integer.parseInt(properties.getProperty("CONCURRENCY_LEVEL"));
+        int maximumPoolSize = Integer.parseInt(properties.getProperty("CONCURRENCY_LEVEL"));
+        long keepAliveTime = Integer.parseInt(properties.getProperty("KEEP_ALIVE_TIME"));
+        int query_queue_capacity = Integer.parseInt(properties.getProperty("QUERY_QUEUE_CAPACITY"));
+
+        ThreadPoolExecutor executor = new ThreadPoolExecutor(
+            corePoolSize,
+            maximumPoolSize,
+            keepAliveTime,
+            TimeUnit.MILLISECONDS,
+            new LinkedBlockingQueue<>(query_queue_capacity)
+        );
+
+        System.out.println(executor);
+        
+       // Submit tasks to the executor
+       for (int i = 0; i < maximumPoolSize; i++) {
+         executor.submit(new Task(i));
+       }
+
+        // Shutdown the executor when all tasks are completed
+        executor.shutdown();
+
+        // Runnable withdrawalTask = () -> doTransaction(1, -100.0);
+        // Runnable depositTask = () -> doTransaction(1, 100.0);
+
+        // threadPool.submit(withdrawalTask);
+        // threadPool.submit(depositTask);
+        
+        // Client Instance creation
         ClientApp ca = new ClientApp(useD8, transactionFileNumber);
+        // ca.multiprocess();
         ca.runQueries();
     }
 
-    public ClientApp(boolean useD8, int transactionFileNumber) {
+       public ClientApp(boolean useD8, int transactionFileNumber) {
         this.useD8 = useD8;
         this.transactionFileNumber = transactionFileNumber;
     }
 
     public void runQueries() {
-
-        // Initialize connector
+        // Initialize connection
         DBClient client = new DBClient();
         client.connect("172.21.0.2", "9042", "datacenter1");
         System.out.println("Connected to datacenter1");
 
         
 
+        // Read file for performing operation
+        String template = "/home/ks/eclipse-workspace/benchmark/benchmark-nosql/data/ShopingCart/project_files/xact_files/%d.txt";
+        File file = new File(String.format(template, useD8 ? 0 : 40, transactionFileNumber));
+        System.out.println(file);
+        try {
+            BufferedReader reader = new BufferedReader((new FileReader(file)));
+            String inputLine;
+            
+            while((inputLine = reader.readLine()) != null  && (reader.readLine().length() > 0)) {
+                // System.out.println(inputLine);
+                String[] lineParams = inputLine.split(",");
+
+
+                // PAYEMENT
+                if(lineParams[0] == "P") {
+                    System.out.println(lineParams[1]);
+                }
+
+                // NEW ORDER
+                if(lineParams[0] == "N") {
+                    System.out.println(lineParams[1]);
+                }
+                
+                // ORDER STATUS
+                if(lineParams[0] == "O") {
+                    System.out.println(lineParams[1]);
+                }
+
+                // STOCK LEVEL
+                if(lineParams[0] == "S") {
+                    System.out.println(lineParams[1]);
+                }
+
+                // DELIVERY
+                if(lineParams[0] == "D") {
+                    System.out.println(lineParams[1]);
+                }
+
+                // Have to check
+                if(lineParams[0] == "R") {
+                    System.out.println(lineParams[1]);
+                }
+
+                // Have to check
+                if(lineParams[0] == "I") {
+                    System.out.println(lineParams[1]);
+                }
+
+            }
+            
+        } catch(IOException e) {
+            e.printStackTrace();
+        }
     //     // Initialize transaction
     //     NewOrder n = new NewOrder(client);
     //     OrderStatus o = new OrderStatus(client);
@@ -181,4 +300,108 @@ public class ClientApp {
     //     System.err.println(String.format("Overall: Time used: %f s", totalTiming));
     //     System.err.println(String.format("Overall: Throughput: %f", throughput));
     }
+
+    public void multiprocess() {
+        // Get the number of available processors (CPU cores)
+        int cores = Runtime.getRuntime().availableProcessors();
+
+        // Create an ExecutorService with a thread pool size equal to the number of cores
+        ExecutorService executorService = Executors.newFixedThreadPool(cores);
+
+        // Submit tasks to the ExecutorService
+        for (int i = 0; i < cores; i++) {
+            final int taskId = i;
+            executorService.submit(() -> {
+                // Perform some CPU-intensive task
+                System.out.println("Task " + taskId + " executed by thread " + Thread.currentThread().getName());
+            });
+        }
+
+        // Shutdown the ExecutorService
+        executorService.shutdown();
+    }
+
+
+
+
+    // private static void doTransaction(int accountId, double amount) {
+    //     Connection connection = null;
+
+    //     try {
+    //         connection = DriverManager.getConnection(URL, USER, PASSWORD);
+    //         connection.setAutoCommit(false);  // Start transaction
+
+    //         // Lock the row for the specific account
+    //         String selectQuery = "SELECT balance FROM accounts WHERE id = ? FOR UPDATE";
+    //         try (PreparedStatement selectStmt = connection.prepareStatement(selectQuery)) {
+    //             selectStmt.setInt(1, accountId);
+    //             try (ResultSet rs = selectStmt.executeQuery()) {
+    //                 if (rs.next()) {
+    //                     double balance = rs.getDouble("balance");
+
+    //                     // Check if the withdrawal is possible
+    //                     if (amount < 0 && balance + amount < 0) {
+    //                         System.out.println("Insufficient funds");
+    //                     } else {
+    //                         // Update balance
+    //                         String updateQuery = "UPDATE accounts SET balance = ? WHERE id = ?";
+    //                         try (PreparedStatement updateStmt = connection.prepareStatement(updateQuery)) {
+    //                             updateStmt.setDouble(1, balance + amount);
+    //                             updateStmt.setInt(2, accountId);
+    //                             updateStmt.executeUpdate();
+    //                         }
+    //                     }
+    //                 }
+    //             }
+    //         }
+
+    //         connection.commit();  // Commit transaction
+
+    //     } catch (SQLException e) {
+    //         if (connection != null) {
+    //             try {
+    //                 connection.rollback();  // Rollback on error
+    //             } catch (SQLException ex) {
+    //                 ex.printStackTrace();
+    //             }
+    //         }
+    //         e.printStackTrace();
+    //     } finally {
+    //         if (connection != null) {
+    //             try {
+    //                 connection.setAutoCommit(true);  // Reset autocommit
+    //                 connection.close();  // Close connection
+    //             } catch (SQLException e) {
+    //                 e.printStackTrace();
+    //             }
+    //         }
+    //     }
+    // }
+    
+
+    static class Task implements Runnable {
+        private final int taskId;
+        
+        public Task(int taskId) {
+            this.taskId = taskId;
+        }
+        
+        @Override
+        public void run() {
+            // Perform some task-specific operations
+            System.out.println("Task " + taskId + " is running.");
+            
+            // Simulate some workload
+            try {
+                Thread.sleep(1000); // Simulating 1 second of workload
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            
+            // Task completed
+            System.out.println("Task " + taskId + " completed.");
+        }
+    }
 }
+
+

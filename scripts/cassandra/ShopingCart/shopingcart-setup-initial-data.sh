@@ -2,7 +2,7 @@
 
 set -ex 
 
-cd "$(dirname ${BASH_SOURCE[0]})/../../../workloads/ShopingCart"
+cd "$(dirname ${BASH_SOURCE[0]})/../../../data/ShopingCart"
 
 if [[ ! -f project_files.zip ]]; then
   curl 'https://www.comp.nus.edu.sg/~cs4224/project_files.zip' -L -o project_files.zip

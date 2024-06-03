@@ -2,7 +2,7 @@
 
 set -ex 
 
-cd "$(dirname ${BASH_SOURCE[0]})/../../../../workloads/ShopingCart/project_files/data_files"
+cd "$(dirname ${BASH_SOURCE[0]})/../../../../data/ShopingCart/project_files/data_files"
 
 echo "$(pwd)"
 
