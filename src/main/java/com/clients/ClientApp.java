@@ -10,12 +10,16 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Properties;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+
+import com.clients.ShopingCart.ShopingCartClient;
+
 import java.io.InputStream;
 
 public class ClientApp {
@@ -32,6 +36,9 @@ public class ClientApp {
             useD8 = (args[0].trim()).equals("D8");
             transactionFileNumber = Integer.parseInt(args[1]);
         }
+
+         // Client Instance creation
+         ClientApp ca = new ClientApp(useD8, transactionFileNumber);
 
         // Configuration
         Properties properties = new Properties();
@@ -70,338 +77,104 @@ public class ClientApp {
 
         System.out.println(executor);
         
-       // Submit tasks to the executor
-       for (int i = 0; i < maximumPoolSize; i++) {
-         executor.submit(new Task(i));
-       }
-
+        // Read file for performing operation
+        String directoryPath = "/home/ks/eclipse-workspace/benchmark/benchmark-nosql/data/ShopingCart/project_files/xact_files/";
+        int fileLength =  ca.countFiles(directoryPath);
+        
+        for(int i=0; i<fileLength; i++) {
+            String template = "/home/ks/eclipse-workspace/benchmark/benchmark-nosql/data/ShopingCart/project_files/xact_files/%d.txt";
+            int fileNumber = i+1;
+            
+            File file = new File(String.format(template, i, transactionFileNumber));
+            
+            if (file.exists()) {
+                try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+                    String inputLine;
+                    while ((inputLine = reader.readLine()) != null) {
+                        System.out.println("Task Started");
+                        executor.submit(new Task(i, fileNumber, inputLine, reader));
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            } else {
+                System.out.println("File " + file.getAbsolutePath() + " does not exist.");
+            }
+        }
+        
         // Shutdown the executor when all tasks are completed
         executor.shutdown();
-
-        // Runnable withdrawalTask = () -> doTransaction(1, -100.0);
-        // Runnable depositTask = () -> doTransaction(1, 100.0);
-
-        // threadPool.submit(withdrawalTask);
-        // threadPool.submit(depositTask);
-        
-        // Client Instance creation
-        ClientApp ca = new ClientApp(useD8, transactionFileNumber);
-        // ca.multiprocess();
-        ca.runQueries();
+        try {
+            if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
+                executor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            executor.shutdownNow();
+        }
     }
 
-       public ClientApp(boolean useD8, int transactionFileNumber) {
+    public ClientApp(boolean useD8, int transactionFileNumber) {
         this.useD8 = useD8;
         this.transactionFileNumber = transactionFileNumber;
     }
 
-    public void runQueries() {
-        // Initialize connection
-        DBClient client = new DBClient();
-        client.connect("172.21.0.2", "9042", "datacenter1");
-        System.out.println("Connected to datacenter1");
-
-        
-
-        // Read file for performing operation
-        String template = "/home/ks/eclipse-workspace/benchmark/benchmark-nosql/data/ShopingCart/project_files/xact_files/%d.txt";
-        File file = new File(String.format(template, useD8 ? 0 : 40, transactionFileNumber));
-        System.out.println(file);
-        try {
-            BufferedReader reader = new BufferedReader((new FileReader(file)));
-            String inputLine;
-            
-            while((inputLine = reader.readLine()) != null  && (reader.readLine().length() > 0)) {
-                // System.out.println(inputLine);
-                String[] lineParams = inputLine.split(",");
-
-
-                // PAYEMENT
-                if(lineParams[0] == "P") {
-                    System.out.println(lineParams[1]);
-                }
-
-                // NEW ORDER
-                if(lineParams[0] == "N") {
-                    System.out.println(lineParams[1]);
-                }
-                
-                // ORDER STATUS
-                if(lineParams[0] == "O") {
-                    System.out.println(lineParams[1]);
-                }
-
-                // STOCK LEVEL
-                if(lineParams[0] == "S") {
-                    System.out.println(lineParams[1]);
-                }
-
-                // DELIVERY
-                if(lineParams[0] == "D") {
-                    System.out.println(lineParams[1]);
-                }
-
-                // Have to check
-                if(lineParams[0] == "R") {
-                    System.out.println(lineParams[1]);
-                }
-
-                // Have to check
-                if(lineParams[0] == "I") {
-                    System.out.println(lineParams[1]);
-                }
-
-            }
-            
-        } catch(IOException e) {
-            e.printStackTrace();
+    public Integer countFiles(String path) {
+        File directory = new File(path);
+        if(!directory.isDirectory()) {
+            System.err.println("Not a directory");
+            return 0;
         }
-    //     // Initialize transaction
-    //     NewOrder n = new NewOrder(client);
-    //     OrderStatus o = new OrderStatus(client);
-    //     Delivery d = new Delivery(client);
-    //     StockLevel s = new StockLevel(client);
-    //     Payment p = new Payment(client);
-    //     PopularItem popular = new PopularItem(client);
-
-    //     String pathTemplate = "../data/xact-spec-files/D%d-xact-files/%d.txt";
-    //     long[] timings = new long[6];
-    //     int[] transactionCounts = new int[6];
-    //     long startTime;
-    //     File file = new File(String.format(pathTemplate, useD8 ? 8 : 40, transactionFileNumber));
-    //     try {
-    //         BufferedReader reader = new BufferedReader(new FileReader(file));
-    //         String inputLine = reader.readLine();
-    //         while (inputLine != null && inputLine.length() > 0) {
-    //             String[] params = inputLine.split(",");
-    //             if (inputLine.charAt(0) == 'N') {
-    //                 int cId = Integer.parseInt(params[1]);
-    //                 int wId = Integer.parseInt(params[2]);
-    //                 int dId = Integer.parseInt(params[3]);
-    //                 int numItems = Integer.parseInt(params[4]);
-    //                 int[] itemNumbers = new int[numItems];
-    //                 int[] supplierWarehouse = new int[numItems];
-    //                 int[] quantity = new int[numItems];
-
-    //                 String newLine;
-    //                 String[] newParams;
-    //                 for (int j = 0; j < numItems; j++) {
-    //                     newLine = reader.readLine();
-    //                     newParams = newLine.split(",");
-    //                     itemNumbers[j] = Integer.parseInt(newParams[0]);
-    //                     supplierWarehouse[j] = Integer.parseInt(newParams[1]);
-    //                     quantity[j] = Integer.parseInt(newParams[2]);
-    //                 }
-
-    //                 try {
-    //                     startTime = System.nanoTime();
-    //                     n.createOrder(wId, dId, cId, numItems, itemNumbers, supplierWarehouse, quantity);
-    //                     timings[0] = timings[0] + (System.nanoTime() - startTime);
-    //                     transactionCounts[0] = transactionCounts[0] + 1;
-    //                 } catch (Exception e) {
-    //                     System.err.println(e.getMessage());
-    //                 }
-    //             } else if (inputLine.charAt(0) == 'P') {
-    //                 int wId = Integer.parseInt(params[1]);
-    //                 int dId = Integer.parseInt(params[2]);
-    //                 int cId = Integer.parseInt(params[3]);
-    //                 float payment = Float.parseFloat(params[4]);
-
-    //                 try {
-    //                     startTime = System.nanoTime();
-    //                     p.processPayment(wId, dId, cId, payment);
-    //                     timings[1] = timings[1] + (System.nanoTime() - startTime);
-    //                     transactionCounts[1] = transactionCounts[1] + 1;
-    //                 } catch (Exception e) {
-    //                     System.err.println(e.getMessage());
-    //                 }
-    //             } else if (inputLine.charAt(0) == 'D') {
-    //                 int wId = Integer.parseInt(params[1]);
-    //                 int carrierId = Integer.parseInt(params[2]);
-
-    //                 try {
-    //                     startTime = System.nanoTime();
-    //                     d.executeQuery(wId, carrierId);
-    //                     timings[2] = timings[2] + (System.nanoTime() - startTime);
-    //                     transactionCounts[2] = transactionCounts[2] + 1;
-    //                 } catch (Exception e) {
-    //                     System.err.println(e.getMessage());
-    //                 }
-    //             } else if (inputLine.charAt(0) == 'O') { // Order Status
-    //                 int wId = Integer.parseInt(params[1]);
-    //                 int dId = Integer.parseInt(params[2]);
-    //                 int cId = Integer.parseInt(params[3]);
-
-    //                 try {
-    //                     startTime = System.nanoTime();
-    //                     o.getOrderStatus(wId, dId, cId);
-    //                     timings[3] = timings[3] + (System.nanoTime() - startTime);
-    //                     transactionCounts[3] = transactionCounts[3] + 1;
-    //                 } catch (Exception e) {
-    //                     System.err.println(e.getMessage());
-    //                 }
-    //             } else if (inputLine.charAt(0) == 'S') {
-    //                 int wId = Integer.parseInt(params[1]);
-    //                 int dId = Integer.parseInt(params[2]);
-    //                 int T = Integer.parseInt(params[3]);
-    //                 int L = Integer.parseInt(params[4]);
-
-    //                 try {
-    //                     startTime = System.nanoTime();
-    //                     s.executeQuery(wId, dId, T, L);
-    //                     timings[4] = timings[4] + (System.nanoTime() - startTime);
-    //                     transactionCounts[4] = transactionCounts[4] + 1;
-    //                 } catch (Exception e) {
-    //                     System.err.println(e.getMessage());
-    //                 }
-    //             } else if (inputLine.charAt(0) == 'I') {
-    //                 int wId = Integer.parseInt(params[1]);
-    //                 int dId = Integer.parseInt(params[2]);
-    //                 int L = Integer.parseInt(params[3]);
-
-    //                 try {
-    //                     startTime = System.nanoTime();
-    //                     popular.findItem(wId, dId, L);
-    //                     timings[5] = timings[5] + (System.nanoTime() - startTime);
-    //                     transactionCounts[5] = transactionCounts[5] + 1;
-    //                 } catch (Exception e) {
-    //                     System.err.println(e.getMessage());
-    //                 }
-    //             } else {
-    //                 System.err.println("\n\nSeems the way of reading of file is wrong\n\n");
-    //             }
-    //             System.out.println(); // new line
-    //             inputLine = reader.readLine();
-    //         }
-    //         reader.close();
-    //     } catch (Exception e) {
-    //         e.printStackTrace();
-    //     }
-    //     client.close();
-
-    //     float totalTiming = (float)0.0;
-    //     float duration;
-    //     float throughput;
-    //     int totalCounts = 0;
-    //     for (int i = 0; i < 6; i++) {
-    //         if (transactionCounts[i] == 0) {
-    //             continue;
-    //         }
-    //         duration = (float)timings[i] / 1000000000;
-    //         throughput = (float)(transactionCounts[i]) / duration;
-    //         totalTiming = totalTiming + duration;
-    //         totalCounts = totalCounts + transactionCounts[i];
-    //         System.err.println(String.format("Type %d: Total Transactions: %d", i, transactionCounts[i]));
-    //         System.err.println(String.format("Type %d: Time used: %f s", i, duration));
-    //         System.err.println(String.format("Type %d: Throughput: %f", i, throughput));
-    //     }
-    //     throughput = (float)totalCounts / totalTiming;
-    //     System.err.println(String.format("Overall: Total Transactions: %d", totalCounts));
-    //     System.err.println(String.format("Overall: Time used: %f s", totalTiming));
-    //     System.err.println(String.format("Overall: Throughput: %f", throughput));
+        int fileLength = directory.listFiles().length;
+        return fileLength;
     }
 
-    public void multiprocess() {
-        // Get the number of available processors (CPU cores)
-        int cores = Runtime.getRuntime().availableProcessors();
-
-        // Create an ExecutorService with a thread pool size equal to the number of cores
-        ExecutorService executorService = Executors.newFixedThreadPool(cores);
-
-        // Submit tasks to the ExecutorService
-        for (int i = 0; i < cores; i++) {
-            final int taskId = i;
-            executorService.submit(() -> {
-                // Perform some CPU-intensive task
-                System.out.println("Task " + taskId + " executed by thread " + Thread.currentThread().getName());
-            });
-        }
-
-        // Shutdown the ExecutorService
-        executorService.shutdown();
-    }
-
-
-
-
-    // private static void doTransaction(int accountId, double amount) {
-    //     Connection connection = null;
-
-    //     try {
-    //         connection = DriverManager.getConnection(URL, USER, PASSWORD);
-    //         connection.setAutoCommit(false);  // Start transaction
-
-    //         // Lock the row for the specific account
-    //         String selectQuery = "SELECT balance FROM accounts WHERE id = ? FOR UPDATE";
-    //         try (PreparedStatement selectStmt = connection.prepareStatement(selectQuery)) {
-    //             selectStmt.setInt(1, accountId);
-    //             try (ResultSet rs = selectStmt.executeQuery()) {
-    //                 if (rs.next()) {
-    //                     double balance = rs.getDouble("balance");
-
-    //                     // Check if the withdrawal is possible
-    //                     if (amount < 0 && balance + amount < 0) {
-    //                         System.out.println("Insufficient funds");
-    //                     } else {
-    //                         // Update balance
-    //                         String updateQuery = "UPDATE accounts SET balance = ? WHERE id = ?";
-    //                         try (PreparedStatement updateStmt = connection.prepareStatement(updateQuery)) {
-    //                             updateStmt.setDouble(1, balance + amount);
-    //                             updateStmt.setInt(2, accountId);
-    //                             updateStmt.executeUpdate();
-    //                         }
-    //                     }
-    //                 }
-    //             }
-    //         }
-
-    //         connection.commit();  // Commit transaction
-
-    //     } catch (SQLException e) {
-    //         if (connection != null) {
-    //             try {
-    //                 connection.rollback();  // Rollback on error
-    //             } catch (SQLException ex) {
-    //                 ex.printStackTrace();
-    //             }
-    //         }
-    //         e.printStackTrace();
-    //     } finally {
-    //         if (connection != null) {
-    //             try {
-    //                 connection.setAutoCommit(true);  // Reset autocommit
-    //                 connection.close();  // Close connection
-    //             } catch (SQLException e) {
-    //                 e.printStackTrace();
-    //             }
-    //         }
-    //     }
-    // }
-    
 
     static class Task implements Runnable {
-        private final int taskId;
-        
-        public Task(int taskId) {
-            this.taskId = taskId;
+        private BufferedReader reader;
+        private final int thread;
+        private final int fileNumber;
+        private final String inputLine;
+        private static final Object lock = new Object();
+        private UUID taskId;
+        private ShopingCartClient sc;
+
+        public Task(int thread, int fileNumber, String inputLine, BufferedReader reader) {
+            this.thread = thread;
+            this.reader = reader;
+            this.fileNumber = fileNumber;
+            this.inputLine = inputLine;
+            this.taskId = UUID.randomUUID();
+            this.sc = new ShopingCartClient();
         }
-        
+
         @Override
         public void run() {
-            // Perform some task-specific operations
-            System.out.println("Task " + taskId + " is running.");
-            
-            // Simulate some workload
+            synchronized (lock) {
+                if (inputLine != null) {
+                    System.out.println("Transaction started " + thread + " => " + taskId + " => " + fileNumber + " => " + inputLine + " => " + reader);
+                    try {
+                        sc.doTransaction(thread, taskId, fileNumber, inputLine, reader);
+                        System.out.println("doTransaction result: ");
+                    } catch (Exception e) {
+                        System.out.println("Exception during transaction: " + e.getMessage());
+                        e.printStackTrace();
+                    }
+                } else {
+                    System.out.println("inputLine is null - thread: " + thread);
+                }
+            }
+
             try {
-                Thread.sleep(1000); // Simulating 1 second of workload
+                Thread.sleep(10); // Simulating 10 milliseconds of workload
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
-            
+
             // Task completed
             System.out.println("Task " + taskId + " completed.");
         }
     }
+
 }
 
 
