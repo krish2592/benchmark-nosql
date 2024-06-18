@@ -1,5 +1,6 @@
 package com.clients.ShopingCart;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -28,7 +29,7 @@ public class NewOrder {
         String whQuery = "select w_tax from warehouses where w_id = ?;";
         String distQuery = "select d_next_o_id, d_tax from districts where d_w_id = ? and d_id = ?;"; 
         String custQuery = "select c_last, c_credit, c_discount from customers where c_w_id = ? and c_d_id = ? and c_id = ?;";
-        String orderQuery = "INSERT INTO orders (o_w_id, o_d_id, o_id, o_c_id, o_carrier_id, o_ol_cnt, o_all_local, o_entry_d, o_ols) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?);";
+        String orderQuery = "INSERT INTO orders (o_w_id, o_d_id, o_id, o_all_local, o_c_id, o_carrier_id, o_entry_d, o_ol_cnt, o_ols) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?);";
 
         warehouseQuery = session.prepare(whQuery);
         districtQuery = session.prepare(distQuery);
@@ -83,6 +84,7 @@ public class NewOrder {
 
         // insert this order
         Date entryDate = new Date();
+        Instant entryInstant = entryDate.toInstant();
         System.out.println(String.format("Order number: %d, %s", orderNo, entryDate));
 
         float totalAmount = (float)0.0;
@@ -156,13 +158,19 @@ public class NewOrder {
                                 .setInt("ol_quantity", request_quantity)
                                 .setString("ol_dist_info", district_info);
             orderLines.put(i + 1, newOrderLine);
-
+ 
             // add output info
             outputInfo.add(String.format("Item: %d: %s, Warehouse %d. Quantity: %d. Amount: %.2f. Stock: %d", i + 1, name, warehouse, request_quantity, item_amount, s_quantity));
-            System.out.println(String.format("Item: %d: %s, Warehouse %d. Quantity: %d. Amount: %.2f. Stock: %d", i + 1, name, warehouse, request_quantity, item_amount, s_quantity));
-            System.out.println(newOrderLine);
+            
         }
+        
+        BoundStatement boundStat = createOrderQuery.bind(
+            w_id, d_id, orderNo, isAllLocal, c_id, null, entryInstant, num_items, orderLines
+        );
 
+        //System.out.println("Query being executed: " + boundStat.getPreparedStatement().getQuery());
+
+        session.execute(boundStat);
     }
 
     public static void main(String[] args) {

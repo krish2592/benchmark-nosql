@@ -8,6 +8,7 @@ import java.util.Map;
 
 import com.clients.DBClient;
 import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.cql.BoundStatement;
 import com.datastax.oss.driver.api.core.cql.PreparedStatement;
 import com.datastax.oss.driver.api.core.cql.Row;
 import com.datastax.oss.driver.api.core.data.UdtValue;
@@ -25,25 +26,31 @@ public class Delivery {
         this.session = client.getSession();
 
         this.selectMinOIdQuery = session.prepare("SELECT min(o_id) as min_o_id, o_c_id, o_ols "
-                + "FROM Orders where o_w_id = ? AND o_d_id = ? AND o_carrier_id = 0;");
+                + "FROM Orders where o_w_id = ? AND o_d_id = ? AND o_carrier_id = ?;");
+
         this.updateDeliveryDateQuery = session.prepare("UPDATE Orders set o_carrier_id = ?, o_ols = ? where o_w_id = ?" +
                 " and o_d_id = ? and o_id = ?;");
+
         this.selectBalanceCntQuery = session.prepare("SELECT c_balance, c_delivery_cnt FROM Customers WHERE c_w_id = ? AND c_d_id = ?"
                 + " AND c_id = ?;");
+
         this.updateBalanceCntQuery = session.prepare("UPDATE Customers SET c_balance = ?, c_delivery_cnt = ? WHERE c_w_id = ? AND c_d_id = ?"
                 + " AND c_id = ?;");
     }
 
-   public void executeQuery(int inputWId, int inputCarrierId) {
+   @SuppressWarnings("unused")
+public void executeQuery(int inputWId, int inputCarrierId) {
         for (int i = 1; i <= 10; i++) {
             int dId = i;
-            int minOId = 0, cId = 0;
+            int minOId = 0;
+            int cId = 0;
             float olSum = 0;
             int olQuantity, olSupplyWId, olIId;
             float olAmount;
             String olDistInfo;
-            results = session.execute(selectMinOIdQuery.bind(inputWId, dId));
+            results = session.execute(selectMinOIdQuery.bind(inputWId, dId, inputCarrierId));
             Date now = new Date();
+           
             Map<Integer, UdtValue> orderLines = new HashMap<Integer, UdtValue>();
 
             UserDefinedType orderLineType = session.getMetadata()
@@ -58,6 +65,8 @@ public class Delivery {
                 System.out.format("%d\n", minOId);
                 cId = row.getInt("o_c_id");
                 System.out.println(""+cId);
+                
+
                 Map<Integer, UdtValue> ols = row.getMap("o_ols", Integer.class, UdtValue.class);
                 for (Integer key: ols.keySet()) {
                     UdtValue ol = ols.get(key);
@@ -67,6 +76,7 @@ public class Delivery {
                     olSupplyWId = ol.getInt("ol_supply_w_id");
                     olAmount = ol.getFloat("ol_amount");
                     olSum += olAmount;
+                    
                     newOrderLine = orderLineType.newValue()
                             .setInt("OL_I_ID", olIId)
                             .setInstant("ol_delivery_d", new Timestamp(now.getTime()).toInstant())
@@ -75,11 +85,16 @@ public class Delivery {
                             .setInt("ol_quantity", olQuantity)
                             .setString("ol_dist_info", olDistInfo);
                     orderLines.put(key, newOrderLine);
-                    System.out.print(key+" "+newOrderLine);
                 }
-               
-                System.out.println(inputCarrierId+ " "+ orderLines+ " "+inputWId+ " "+ dId+ " "+ minOId);
-                session.execute(updateDeliveryDateQuery.bind(inputCarrierId, orderLines, inputWId, dId, minOId));
+
+                if(orderLines == null) {
+                    throw new Error("orderLines can't be empty: ");
+                }       
+
+                BoundStatement boundStat =  updateDeliveryDateQuery.bind(inputCarrierId, orderLines, inputWId, dId, minOId);
+                // System.out.println(boundStat.getPreparedStatement().getQuery());
+                // System.out.println("Bound values: " + boundStat.getValues());
+                session.execute(boundStat);
                 break;
             }
 
@@ -94,12 +109,13 @@ public class Delivery {
             cCnt++;
             session.execute(updateBalanceCntQuery.bind(cBalance, cCnt, inputWId, dId, cId));
         }
-        System.out.format("Done with Delivery\n\n");
+        System.out.format("\nDone with Delivery\n\n");
     }
 
 
     public static void main(String[] args) {
-        int inputWId = 1, inputCarrierId = 7;
+        int inputWId = 1; 
+        int inputCarrierId = 7;
 
         DBClient client = new DBClient();
         client.connect("172.21.0.2", 9042, "datacenter1", "shop_db");

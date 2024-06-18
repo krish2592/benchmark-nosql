@@ -68,7 +68,6 @@ public class OrderStatus {
                     ol.getInt("ol_quantity"), ol.getFloat("ol_amount"), ol.getInstant("ol_delivery_d")));
         }
 
-        System.out.println();
     }
 
 
