@@ -6,18 +6,16 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 import java.util.UUID;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+import com.google.common.util.concurrent.RateLimiter;
 import com.clients.ShopingCart.ShopingCartClient;
 
 import java.io.InputStream;
@@ -75,24 +73,54 @@ public class ClientApp {
             new LinkedBlockingQueue<>(query_queue_capacity)
         );
 
-        System.out.println(executor);
-        
+        RateLimiter rateLimiter = RateLimiter.create(2.0);
         // Read file for performing operation
-        String directoryPath = "/home/ks/eclipse-workspace/benchmark/benchmark-nosql/data/ShopingCart/project_files/xact_files/";
+        String directoryPath = "/home/ks/eclipse-workspace/benchmark/benchmark-nosql/data/ShopingCart/project_files/xact_files/temp";
         int fileLength =  ca.countFiles(directoryPath);
         
         for(int i=0; i<fileLength; i++) {
-            String template = "/home/ks/eclipse-workspace/benchmark/benchmark-nosql/data/ShopingCart/project_files/xact_files/%d.txt";
+            String template = "/home/ks/eclipse-workspace/benchmark/benchmark-nosql/data/ShopingCart/project_files/xact_files/temp/%d.txt";
             int fileNumber = i+1;
             
             File file = new File(String.format(template, i, transactionFileNumber));
+
+            // List<String> addQueries = new ArrayList<String>();
+            // String batchSize = properties.getProperty("BATCH_SIZE");
+
+            // if(file.exists()) {
+            //     try {
+            //         BufferedReader reader = new BufferedReader(new FileReader(file));
+                     
+            //         addQueries.add(reader.readLine());
+
+            //     } catch (IOException e) {
+            //         // TODO: handle exception
+            //     }
+            // }
+
+
             
             if (file.exists()) {
-                try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+                try (
+                    BufferedReader reader = new BufferedReader(new FileReader(file))
+                ) {
                     String inputLine;
                     while ((inputLine = reader.readLine()) != null) {
-                        System.out.println("Task Started");
-                        executor.submit(new Task(i, fileNumber, inputLine, reader));
+                        rateLimiter.acquire();
+                        if(inputLine.charAt(0) == 'N') {
+                            List<String> batchItems = new ArrayList<String>();
+                            int n = Integer.valueOf(inputLine.split(",")[4]);
+                            for(int k=0; k<n; k++) {
+                                batchItems.add(inputLine);
+                                inputLine = reader.readLine();
+                            }
+                            executor.submit( 
+                                new Task(fileNumber, batchItems));
+                        } else {
+                            List<String> batchItems = new ArrayList<String>();
+                            batchItems.add(inputLine);
+                            executor.submit(new Task(fileNumber, batchItems));
+                        }
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -130,48 +158,44 @@ public class ClientApp {
 
 
     static class Task implements Runnable {
-        private BufferedReader reader;
-        private final int thread;
         private final int fileNumber;
-        private final String inputLine;
-        private static final Object lock = new Object();
-        private UUID taskId;
+        private static final Lock lock = new ReentrantLock();
+        private UUID transactionId;
         private ShopingCartClient sc;
+        private List<String> batchItems;
 
-        public Task(int thread, int fileNumber, String inputLine, BufferedReader reader) {
-            this.thread = thread;
-            this.reader = reader;
+        Properties properties = new Properties();
+
+        public Task(int fileNumber, List<String> batchItems) {
+            this.batchItems = batchItems;
             this.fileNumber = fileNumber;
-            this.inputLine = inputLine;
-            this.taskId = UUID.randomUUID();
+            this.transactionId = UUID.randomUUID();
             this.sc = new ShopingCartClient();
         }
 
         @Override
         public void run() {
-            synchronized (lock) {
-                if (inputLine != null) {
-                    System.out.println("Transaction started " + thread + " => " + taskId + " => " + fileNumber + " => " + inputLine + " => " + reader);
+            try {
+                long threadId = Thread.currentThread().getId();
+                lock.lock();
+                if (!batchItems.isEmpty()) {
                     try {
-                        sc.doTransaction(thread, taskId, fileNumber, inputLine, reader);
-                        System.out.println("doTransaction result: ");
+                        sc.doTransaction(threadId, transactionId, fileNumber, batchItems);
                     } catch (Exception e) {
                         System.out.println("Exception during transaction: " + e.getMessage());
                         e.printStackTrace();
                     }
-                } else {
-                    System.out.println("inputLine is null - thread: " + thread);
                 }
-            }
+                try {
+                    Thread.sleep(Integer.parseInt(properties.getProperty("SLEEP_TIME_IN_MS")));
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
 
-            try {
-                Thread.sleep(10); // Simulating 10 milliseconds of workload
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+                System.out.println("completed.");
+            } finally {
+                lock.unlock();
             }
-
-            // Task completed
-            System.out.println("Task " + taskId + " completed.");
         }
     }
 

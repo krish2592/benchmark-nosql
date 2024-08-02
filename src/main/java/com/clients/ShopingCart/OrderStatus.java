@@ -32,9 +32,9 @@ public class OrderStatus {
 
         // should be a single value
         Row customer = resultSet.all().get(0);
-        System.out.println("Customer Info:");
-        System.out.println(String.format("Name: %s %s %s ,Balance: %.4f", customer.getString("c_first"), customer.getString("c_middle"),
-                customer.getString("c_last"), customer.getFloat("c_balance")));
+        // System.out.println("Customer Info:");
+        // System.out.println(String.format("Name: %s %s %s ,Balance: %.4f", customer.getString("c_first"), customer.getString("c_middle"),
+         //       customer.getString("c_last"), customer.getFloat("c_balance")));
 
         // retrieve order information for this customer
         resultSet = session.execute(orderQuery.bind(c_w_id, c_d_id, c_id));
@@ -56,16 +56,16 @@ public class OrderStatus {
         Row lastOrder = allOrders.get(targetIndex);
         int orderId = lastOrder.getInt("o_id");
 
-        System.out.println("Last Order:");
-        System.out.println(String.format("id: %d, time: %s, carrier_id: %d", orderId,
-                lastOrder.getInstant("o_entry_d"), lastOrder.getInt("o_carrier_id")));
+        // System.out.println("Last Order:");
+        // System.out.println(String.format("id: %d, time: %s, carrier_id: %d", orderId,
+              //  lastOrder.getInstant("o_entry_d"), lastOrder.getInt("o_carrier_id")));
 
         // retrieve order-line for this order.
         Map<Integer, UdtValue> ols = lastOrder.getMap("o_ols", Integer.class, UdtValue.class);
         for (Integer key: ols.keySet()) {
             UdtValue ol = ols.get(key);
-            System.out.println(String.format("%d, %d, %d, %.4f, %s ",ol.getInt("ol_i_id"), ol.getInt("ol_supply_w_id"),
-                    ol.getInt("ol_quantity"), ol.getFloat("ol_amount"), ol.getInstant("ol_delivery_d")));
+            // System.out.println(String.format("%d, %d, %d, %.4f, %s ",ol.getInt("ol_i_id"), ol.getInt("ol_supply_w_id"),
+                 //   ol.getInt("ol_quantity"), ol.getFloat("ol_amount"), ol.getInstant("ol_delivery_d")));
         }
 
     }
@@ -74,7 +74,7 @@ public class OrderStatus {
     public static void main(String[] args) {
         DBClient client = new DBClient();
         client.connect("172.21.0.2", 9042, "datacenter1", "shop_db");
-        System.out.println("Connected to datacenter1");
+        // System.out.println("Connected to datacenter1");
     
         OrderStatus transaction = new OrderStatus(client);
         transaction.getOrderStatus(1, 1, 1);

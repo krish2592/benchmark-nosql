@@ -67,7 +67,7 @@ public class NewOrder {
         String lastName = customerRow.getString("c_last");
         String credit = customerRow.getString("c_credit");
 
-        System.out.println(String.format("User %s, %s, %.2f", lastName, credit, discount));
+        // System.out.println(String.format("User %s, %s, %.2f", lastName, credit, discount));
         System.out.println(String.format("Warehouse Tax: %.2f, District tax: %.2f", warehouse_tax, district_tax));
 
         session.execute(String.format("update districts set d_next_o_id = %d where d_w_id = %d and d_id = %d;",
@@ -104,7 +104,7 @@ public class NewOrder {
                                 .orElseThrow(() -> new IllegalArgumentException("UDT 'orderline' not found"));
         
         
-        System.out.println("keyspace-name   "+ session.getMetadata());
+        // // System.out.println("keyspace-name   "+ session.getMetadata());
         System.out.println("keyspace-name   "+ session.getKeyspace().get());
         
 
@@ -114,7 +114,8 @@ public class NewOrder {
             item = item_number[i];
             warehouse = supplier_warehouse[i];
             request_quantity = quantity[i];
-
+            System.out.println(item + " " + warehouse+ " "+ request_quantity);
+            System.out.println(item_number[i]+ "  "+ supplier_warehouse[i]+"  "+ quantity[i]);
             // get stock info
             resultSet = session.execute(String.format("select s_quantity, s_ytd, s_order_cnt, s_remote_cnt, s_dist_%02d from stocks where s_w_id = %d and s_i_id = %d;", d_id, w_id, item));
             resultRow = resultSet.one();
@@ -168,7 +169,7 @@ public class NewOrder {
             w_id, d_id, orderNo, isAllLocal, c_id, null, entryInstant, num_items, orderLines
         );
 
-        //System.out.println("Query being executed: " + boundStat.getPreparedStatement().getQuery());
+        // System.out.println("Query being executed: " + boundStat.getPreparedStatement().getQuery());
 
         session.execute(boundStat);
     }
@@ -176,7 +177,7 @@ public class NewOrder {
     public static void main(String[] args) {
         DBClient client = new DBClient();
         client.connect("172.21.0.2", 9042, "datacenter1", "shop_db");
-        System.out.println("Connected to datacenter1");
+        // // System.out.println("Connected to datacenter1");
 
         NewOrder transaction = new NewOrder(client);
         int[] warehouses = new int[] {1, 2};

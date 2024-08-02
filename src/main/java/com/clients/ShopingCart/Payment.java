@@ -52,9 +52,9 @@ public class Payment {
 
         session.execute(updateWarehouse.bind(newYTD, w_id));
         // display warehouse address
-        System.out.println("Warehouse Address:");
-        System.out.println(String.format("Street: %s %s, City: %s, State: %s, ZIP: %s", warehouse.getString("w_street_1"),
-                warehouse.getString("w_street_2"), warehouse.getString("w_city"), warehouse.getString("w_state"), warehouse.getString("w_zip")));
+        // System.out.println("Warehouse Address:");
+        // System.out.println(String.format("Street: %s %s, City: %s, State: %s, ZIP: %s", warehouse.getString("w_street_1"),
+              //  warehouse.getString("w_street_2"), warehouse.getString("w_city"), warehouse.getString("w_state"), warehouse.getString("w_zip")));
     }
 
     private void updateDistrictYTD(int w_id, int d_id, float amount){
@@ -69,9 +69,9 @@ public class Payment {
 
         session.execute(updateDistrict.bind(newYTD, w_id, d_id));
         // display district address
-        System.out.println("District Address:");
-        System.out.println(String.format("Street: %s %s, City: %s, State: %s, ZIP: %s", district.getString("d_street_1"),
-                district.getString("d_street_2"), district.getString("d_city"), district.getString("d_state"), district.getString("d_zip")));
+        // System.out.println("District Address:");
+        // System.out.println(String.format("Street: %s %s, City: %s, State: %s, ZIP: %s", district.getString("d_street_1"),
+            //    district.getString("d_street_2"), district.getString("d_city"), district.getString("d_state"), district.getString("d_zip")));
 
     }
 
@@ -89,13 +89,13 @@ public class Payment {
 
         session.execute(updateCustomer.bind(newBalance, newYTD, newCnt, w_id, d_id, c_id));
         // display district address
-        System.out.println("Customer Information:");
-        System.out.println(String.format("Customer ID: (%d,%d,%d), Name: (%s %s %s), Address: (%s,%s,%s,%s,%s)"
-                        + "%s, %s, %s, %.2f, %.4f, %.2f", w_id, d_id, c_id, customer.getString("c_first"), customer.getString("c_middle"),
-                        customer.getString("c_last"), customer.getString("c_street_1"), customer.getString("c_street_2"), customer.getString("c_city"),
-                        customer.getString("c_state"), customer.getString("c_zip"), customer.getString("c_phone"), customer.getInstant("c_since"),
-                        customer.getString("c_credit"), customer.getFloat("c_credit_lim"), customer.getFloat("c_discount"), customer.getFloat("c_balance")));
-        System.out.println("Payment Amount:" + amount);
+        // System.out.println("Customer Information:");
+        // System.out.println(String.format("Customer ID: (%d,%d,%d), Name: (%s %s %s), Address: (%s,%s,%s,%s,%s)"
+                    //    + "%s, %s, %s, %.2f, %.4f, %.2f", w_id, d_id, c_id, customer.getString("c_first"), customer.getString("c_middle"),
+                    //    customer.getString("c_last"), customer.getString("c_street_1"), customer.getString("c_street_2"), customer.getString("c_city"),
+                    //    customer.getString("c_state"), customer.getString("c_zip"), customer.getString("c_phone"), customer.getInstant("c_since"),
+                    //    customer.getString("c_credit"), customer.getFloat("c_credit_lim"), customer.getFloat("c_discount"), customer.getFloat("c_balance")));
+        // System.out.println("Payment Amount:" + amount);
     }
     
 }

@@ -51,8 +51,8 @@ public class PopularItem {
             customers = session.execute(selectCustomer.bind(W_ID, D_ID, customerID));
             Row customer = customers.all().get(0);
 
-            System.out.println(String.format("Order Number: %d, Entry Date and Time: %s, Name: (%s %s %s),", orderID, order.getInstant("o_entry_d"),
-                    customer.getString("c_first"), customer.getString("c_middle"), customer.getString("c_last")));
+            // System.out.println(String.format("Order Number: %d, Entry Date and Time: %s, Name: (%s %s %s),", orderID, order.getInstant("o_entry_d"),
+                 //   customer.getString("c_first"), customer.getString("c_middle"), customer.getString("c_last")));
 
             // ResultSet orderLines = session.execute(selectOrderLine.bind(W_ID, D_ID, orderID));
             // get orderline details for this order
@@ -82,7 +82,7 @@ public class PopularItem {
                 popularItems = session.execute(selectItem.bind(popularItmID));
                 Row popularItem = popularItems.all().get(0);
                 String itmName = popularItem.getString("i_name");
-                System.out.println(String.format("Item Name: %s, Quantity: %d", itmName, popularItmCnt));
+                // System.out.println(String.format("Item Name: %s, Quantity: %d", itmName, popularItmCnt));
 
                 // if not existing popular items add to them
                 if(!popularItms.containsKey(popularItmID)){
@@ -92,7 +92,7 @@ public class PopularItem {
         }
 
         for(Integer itmID : popularItms.keySet()){
-            System.out.print("Item:" + popularItms.get(itmID) + itemCount.get(itmID) + "; ");
+            // System.out.print("Item:" + popularItms.get(itmID) + itemCount.get(itmID) + "; ");
         }
     }
 
@@ -110,7 +110,7 @@ public class PopularItem {
     public static void main(String[] args) {
         DBClient client = new DBClient();
         client.connect("172.21.0.2", 9042, "datacenter1", "shop_db");
-        System.out.println("Connected to datacenter1");
+        // System.out.println("Connected to datacenter1");
 
         PopularItem transaction = new PopularItem(client);
         transaction.findItem(1, 1, 47);

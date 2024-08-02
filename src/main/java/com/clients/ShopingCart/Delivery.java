@@ -60,11 +60,11 @@ public void executeQuery(int inputWId, int inputCarrierId) {
 
             UdtValue newOrderLine;
             for (Row row: results) {
-                System.out.println(""+row);
+                // System.out.println(""+row);
                 minOId = row.getInt("min_o_id");
                 System.out.format("%d\n", minOId);
                 cId = row.getInt("o_c_id");
-                System.out.println(""+cId);
+                // System.out.println(""+cId);
                 
 
                 Map<Integer, UdtValue> ols = row.getMap("o_ols", Integer.class, UdtValue.class);
@@ -92,8 +92,8 @@ public void executeQuery(int inputWId, int inputCarrierId) {
                 }       
 
                 BoundStatement boundStat =  updateDeliveryDateQuery.bind(inputCarrierId, orderLines, inputWId, dId, minOId);
-                // System.out.println(boundStat.getPreparedStatement().getQuery());
-                // System.out.println("Bound values: " + boundStat.getValues());
+                // // System.out.println(boundStat.getPreparedStatement().getQuery());
+                // // System.out.println("Bound values: " + boundStat.getValues());
                 session.execute(boundStat);
                 break;
             }
@@ -115,11 +115,11 @@ public void executeQuery(int inputWId, int inputCarrierId) {
 
     public static void main(String[] args) {
         int inputWId = 1; 
-        int inputCarrierId = 7;
+        int inputCarrierId = 10;
 
         DBClient client = new DBClient();
         client.connect("172.21.0.2", 9042, "datacenter1", "shop_db");
-        System.out.println("Connected to datacenter1");
+        // System.out.println("Connected to datacenter1");
 
         Delivery d = new Delivery(client);
         d.executeQuery(inputWId, inputCarrierId);

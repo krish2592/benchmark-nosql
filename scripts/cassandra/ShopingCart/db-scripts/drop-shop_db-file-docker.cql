@@ -1,0 +1,11 @@
+use shop_db;
+truncate customers;
+truncate districts;
+truncate items_unused;
+truncate orders;
+truncate stocks_unused;
+truncate customers_unused;
+truncate items;
+truncate orderlines;
+truncate stocks;
+truncate warehouses;

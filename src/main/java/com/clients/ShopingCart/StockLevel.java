@@ -46,7 +46,7 @@ public class StockLevel {
                 }
             }
         }
-        System.out.format("Counts of items: %d", sum);
+        // System.out.format("Counts of items: %d", sum);
     }
 
     public static void main(String[] args) {

@@ -1,5 +1,16 @@
 USE shop_db;
 
+truncate customers;
+truncate districts;
+truncate items_unused;
+truncate orders;
+truncate stocks_unused;
+truncate customers_unused;
+truncate items;
+truncate orderlines;
+truncate stocks;
+truncate warehouses;
+
 -- Import data
 COPY warehouses (w_id, w_name, w_street_1, w_street_2, w_city, w_state, w_zip, w_tax, w_ytd) FROM '/shoping-data/warehouse.csv' WITH NULL = 'null';
 COPY districts (d_w_id, d_id, d_name, d_street_1, d_street_2, d_city, d_state, d_zip, d_tax, d_ytd, d_next_o_id) FROM '/shoping-data/district.csv' WITH NULL = 'null';
